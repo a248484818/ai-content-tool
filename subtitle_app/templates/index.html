@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 AI 爆款内容生成器</title>
+    <style>
+        /* ===== 全局样式重置 ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f0 100%);
+            color: #1d2b3e;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ===== 头部 ===== */
+        .header {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: #fff;
+            text-align: center;
+            padding: 40px 20px 32px;
+            margin-bottom: 32px;
+        }
+
+        .header h1 { font-size: 2rem; font-weight: 800; letter-spacing: 1px; }
+
+        .header h1 .highlight {
+            background: linear-gradient(90deg, #f7971e, #ffd200);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p { opacity: 0.8; margin-top: 8px; font-size: 1rem; }
+        .header .api-status { margin-top: 12px; font-size: 0.85rem; opacity: 0.6; }
+
+        .header .api-status .dot {
+            display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; margin-right: 6px;
+        }
+
+        .header .api-status .dot.online { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+        .header .api-status .dot.offline { background: #f87171; }
+
+        /* ===== 主容器：最大宽度800px，居中 ===== */
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+
+        /* ===== 卡片通用样式 ===== */
+        .card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid #e8ecf1;
+            padding: 28px 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+            transition: box-shadow 0.2s;
+        }
+
+        .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
+        /* ===== 输入卡片 ===== */
+        .input-card label {
+            font-weight: 700; font-size: 0.95rem;
+            display: block; margin-bottom: 8px; color: #1d2b3e;
+        }
+
+        .topic-row { display: flex; gap: 12px; margin-bottom: 12px; }
+
+        .topic-row input {
+            flex: 1; padding: 12px 16px; border: 2px solid #e2e8f0;
+            border-radius: 10px; font-size: 1rem; outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .topic-row input:focus { border-color: #f7971e; box-shadow: 0 0 0 3px rgba(247,151,30,0.12); }
+
+        .topic-row .btn-primary {
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            border: none; border-radius: 10px; color: #1d2b3e;
+            font-weight: 700; font-size: 1rem; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s; white-space: nowrap;
+        }
+
+        .topic-row .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(247,151,30,0.35); }
+        .topic-row .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .topic-row .btn-primary.loading { position: relative; color: transparent; }
+
+        .topic-row .btn-primary.loading::after {
+            content: ""; position: absolute; inset: 50% auto auto 50%;
+            width: 22px; height: 22px; margin: -11px 0 0 -11px;
+            border: 3px solid rgba(29,43,62,0.2); border-top-color: #1d2b3e;
+            border-radius: 50%; animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== 模板选择 ===== */
+        .template-selector {
+            display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+        }
+
+        .template-btn {
+            padding: 8px 18px; border: 2px solid #e2e8f0; border-radius: 20px;
+            background: #fff; color: #666; font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+
+        .template-btn:hover { border-color: #667eea; color: #667eea; }
+        .template-btn.active { border-color: #667eea; background: #667eea; color: #fff; }
+
+        /* 自定义指令 */
+        .custom-instructions { margin-top: 4px; }
+
+        .custom-instructions textarea {
+            width: 100%; min-height: 48px; padding: 10px 14px;
+            border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.9rem;
+            resize: vertical; outline: none; font-family: inherit; transition: border-color 0.2s;
+        }
+
+        .custom-instructions textarea:focus { border-color: #f7971e; box-shadow: 0 0 0 3px rgba(247,151,30,0.08); }
+        .custom-instructions .hint { font-size: 0.8rem; color: #999; margin-top: 4px; }
+
+        /* ===== 批量输入 ===== */
+        .batch-toggle {
+            background: none; border: none; color: #667eea;
+            font-size: 0.88rem; cursor: pointer; padding: 2px 0 8px; font-weight: 600;
+        }
+
+        .batch-toggle:hover { text-decoration: underline; }
+        .batch-area { display: none; margin-top: 8px; }
+        .batch-area.show { display: block; }
+
+        .batch-area textarea {
+            width: 100%; min-height: 72px; padding: 12px 14px;
+            border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.9rem;
+            resize: vertical; outline: none; font-family: inherit;
+        }
+
+        .batch-area textarea:focus { border-color: #667eea; }
+
+        .batch-area .btn-secondary {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none; border-radius: 10px; color: #fff;
+            font-weight: 700; font-size: 0.95rem; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s; margin-top: 10px;
+        }
+
+        .batch-area .btn-secondary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(102,126,234,0.35); }
+        .batch-area .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* ===== 加载提示 ===== */
+        .loading-card { display: none; text-align: center; padding: 40px 30px; }
+        .loading-card.show { display: block; }
+
+        .loading-card .spinner {
+            display: inline-block; width: 40px; height: 40px;
+            border: 4px solid #e2e8f0; border-top-color: #f7971e;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px;
+        }
+
+        .loading-card .loading-text { color: #666; font-size: 0.95rem; }
+
+        /* ===== 进度条（批量） ===== */
+        .progress-card { display: none; }
+        .progress-card.show { display: block; }
+
+        .progress-bar-wrap {
+            background: #e2e8f0; border-radius: 20px; height: 8px;
+            overflow: hidden; margin-top: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 20px; transition: width 0.3s ease;
+        }
+
+        .progress-text { font-size: 0.9rem; color: #666; margin-top: 6px; }
+
+        /* ===== 结果卡片 ===== */
+        .result-card { display: none; }
+        .result-card.show { display: block; }
+
+        .result-header {
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin-bottom: 20px; padding-bottom: 14px;
+            border-bottom: 2px solid #f0f2f5; flex-wrap: wrap; gap: 8px;
+        }
+
+        .result-header .topic-tag { font-size: 1.25rem; font-weight: 700; color: #f7971e; }
+
+        .result-header .meta-info {
+            font-size: 0.8rem; color: #aaa;
+            display: flex; gap: 12px; align-items: center;
+        }
+
+        .result-header .meta-info .saved-badge { color: #4ade80; font-weight: 600; }
+
+        /* ===== 分块标题样式 ===== */
+        .block-title {
+            font-weight: 700; font-size: 1rem; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px; color: #1d2b3e;
+        }
+
+        .block-title .icon { font-size: 1.2rem; }
+
+        .block-title .badge {
+            font-size: 0.7rem; background: #e2e8f0; color: #666;
+            padding: 2px 10px; border-radius: 20px; font-weight: 500; margin-left: 4px;
+        }
+
+        /* ===== 标题列表 ===== */
+        .title-list { list-style: none; margin-bottom: 28px; }
+
+        .title-list li {
+            padding: 10px 14px; margin-bottom: 8px; background: #f7f8fa;
+            border-radius: 8px; font-size: 0.95rem; display: flex;
+            align-items: center; gap: 10px; cursor: pointer;
+            transition: all 0.2s; border: 1px solid transparent;
+        }
+
+        .title-list li:hover { background: #fef3c7; border-color: #fde68a; }
+
+        .title-list li .idx {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 24px; height: 24px; background: #f7971e; color: #fff;
+            border-radius: 50%; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+        }
+
+        .title-list li .copy-icon {
+            margin-left: auto; font-size: 0.75rem; color: #ccc;
+            flex-shrink: 0; opacity: 0; transition: opacity 0.2s;
+        }
+
+        .title-list li:hover .copy-icon { opacity: 1; }
+
+        /* ===== 正文区域 ===== */
+        .article-block {
+            background: #f7f8fa; padding: 20px 22px; border-radius: 10px;
+            line-height: 1.9; font-size: 0.95rem; margin-bottom: 28px;
+            color: #333; border-left: 4px solid #f7971e; white-space: pre-wrap;
+        }
+
+        /* ===== 封面文案 ===== */
+        .cover-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 12px; margin-bottom: 4px;
+        }
+
+        .cover-item {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff; padding: 20px 16px; border-radius: 10px;
+            font-weight: 600; font-size: 0.95rem; text-align: center;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            min-height: 70px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; word-break: break-all;
+        }
+
+        .cover-item:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(102,126,234,0.35); }
+        .cover-item .copy-tip { display: none; font-size: 0.7rem; opacity: 0.7; margin-top: 6px; }
+        .cover-item:hover .copy-tip { display: block; }
+
+        /* ===== 标签 ===== */
+        .tags-block {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+        }
+
+        .tag-item {
+            background: #f0f4ff; color: #667eea; padding: 4px 14px;
+            border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; transition: background 0.2s;
+        }
+
+        .tag-item:hover { background: #e0e8ff; }
+
+        /* ===== 评论区引导 ===== */
+        .comment-hook-block {
+            background: #fff8f0; border: 1px solid #fde68a;
+            padding: 14px 18px; border-radius: 10px; margin-bottom: 24px;
+            display: flex; align-items: center; gap: 10px; font-size: 0.95rem; color: #92400e;
+        }
+
+        .comment-hook-block .hook-icon { font-size: 1.2rem; }
+
+        /* ===== 评分 ===== */
+        .scores-block {
+            display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;
+        }
+
+        .score-item {
+            flex: 1; min-width: 100px; background: #f7f8fa;
+            border-radius: 10px; padding: 12px 14px; text-align: center;
+        }
+
+        .score-item .score-label { font-size: 0.75rem; color: #999; font-weight: 600; }
+        .score-item .score-value { font-size: 1.5rem; font-weight: 800; color: #1d2b3e; margin: 2px 0; }
+        .score-item .score-bar {
+            height: 4px; border-radius: 4px; background: #e2e8f0; overflow: hidden; margin-top: 4px;
+        }
+        .score-item .score-bar .fill {
+            height: 100%; border-radius: 4px; transition: width 0.6s ease;
+        }
+        .score-item .score-bar .fill.high { background: #4ade80; }
+        .score-item .score-bar .fill.mid { background: #fbbf24; }
+        .score-item .score-bar .fill.low { background: #f87171; }
+
+        /* ===== 批量结果 ===== */
+        .batch-results { display: grid; gap: 24px; }
+
+        .batch-result-item {
+            background: #fff; border-radius: 14px; border: 1px solid #e8ecf1;
+            padding: 24px 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+
+        .batch-result-item .batch-topic { font-weight: 700; font-size: 1.1rem; color: #f7971e; margin-bottom: 6px; }
+        .batch-result-item .batch-template-label { font-size: 0.75rem; color: #aaa; margin-bottom: 12px; }
+        .batch-result-item .batch-error { color: #dc2626; }
+
+        /* ===== 错误提示 ===== */
+        .error-card { display: none; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 16px 20px; border-radius: 10px; font-size: 0.9rem; }
+        .error-card.show { display: block; }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: #1d2b3e; color: #fff; padding: 12px 28px;
+            border-radius: 10px; font-size: 0.9rem; z-index: 999;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+            opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ===== 页脚 ===== */
+        .footer { text-align: center; padding: 20px; color: #bbb; font-size: 0.82rem; }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 640px) {
+            .header { padding: 32px 16px 24px; }
+            .header h1 { font-size: 1.5rem; }
+            .card { padding: 20px; }
+            .topic-row { flex-direction: column; }
+            .topic-row .btn-primary { width: 100%; }
+            .cover-grid { grid-template-columns: 1fr; }
+            .result-header { flex-direction: column; }
+            .scores-block { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 头部 ===== -->
+    <header class="header">
+        <h1>🔥 <span class="highlight">AI 爆款内容</span> 生成器</h1>
+        <p>输入主题，AI 自动生成 5 个爆款标题 + 正文 + 3 个封面文案</p>
+        <div class="api-status">
+            <span class="dot online" id="apiDot"></span>
+            <span id="apiStatus">检查 API 连接中...</span>
+        </div>
+    </header>
+
+    <!-- ===== 主容器 ===== -->
+    <div class="container">
+
+        <!-- ===== 输入卡片 ===== -->
+        <div class="card input-card">
+            <label for="topicInput">🎯 输入主题关键词</label>
+            <div class="topic-row">
+                <input type="text" id="topicInput" placeholder="例如：AI副业、小红书探店、短视频带货..." autocomplete="off">
+                <button class="btn-primary" id="btnGenerate">✨ 生成内容</button>
+            </div>
+
+            <div class="template-selector" id="templateSelector">
+                <button class="template-btn active" data-template="fuye">💰 副业赚钱</button>
+                <button class="template-btn" data-template="share">📖 经验分享</button>
+                <button class="template-btn" data-template="caikeng">⚠️ 踩坑避雷</button>
+            </div>
+
+            <button class="batch-toggle" id="btnToggleBatch">📋 批量输入多个主题 ▾</button>
+
+            <div class="batch-area" id="batchArea">
+                <textarea id="batchInput" placeholder="每行一个主题，例如：&#10;AI副业&#10;小红书探店&#10;短视频带货"></textarea>
+                <button class="btn-secondary" id="btnBatchGenerate">🚀 批量生成</button>
+            </div>
+
+            <div class="custom-instructions">
+                <textarea id="customInstructions" placeholder="（可选）自定义指令：例如「语气更口语化」「适合小红书风格」「多举真实案例」等"></textarea>
+                <div class="hint">💡 留空使用默认风格，填写的指令会注入到 AI 提示词中</div>
+            </div>
+        </div>
+
+        <!-- ===== 加载提示卡片 ===== -->
+        <div class="card loading-card" id="loadingCard">
+            <div class="spinner"></div>
+            <div class="loading-text">🤖 AI 正在生成内容...</div>
+        </div>
+
+        <!-- ===== 进度条卡片（批量） ===== -->
+        <div class="card progress-card" id="progressCard">
+            <strong>⏳ 批量生成进度</strong>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">准备中...</div>
+        </div>
+
+        <!-- ===== 错误提示 ===== -->
+        <div class="card error-card" id="errorCard">
+            <span id="errorText"></span>
+        </div>
+
+        <!-- ===== 结果卡片（单条） ===== -->
+        <div class="card result-card" id="resultCard">
+            <div class="result-header">
+                <span class="topic-tag" id="resultTopic">🎯 AI副业</span>
+                <div class="meta-info">
+                    <span class="saved-badge" id="resultSaved" style="display:none;">💾 已自动保存</span>
+                    <span id="resultTime"></span>
+                </div>
+            </div>
+
+            <div class="block-title">
+                <span class="icon">🔥</span> 爆款标题 <span class="badge">5条 · 点击可复制</span>
+            </div>
+            <ul class="title-list" id="titleList"></ul>
+
+            <div class="block-title">
+                <span class="icon">📝</span> 正文
+            </div>
+            <div class="article-block" id="articleContent"></div>
+
+            <div class="block-title">
+                <span class="icon">🖼️</span> 封面文案 <span class="badge">3条 · 点击可复制</span>
+            </div>
+            <div class="cover-grid" id="coverList"></div>
+
+            <!-- 标签 -->
+            <div class="block-title">
+                <span class="icon">🏷️</span> 推荐标签
+            </div>
+            <div class="tags-block" id="tagsBlock"></div>
+
+            <!-- 评论区引导 -->
+            <div class="comment-hook-block" id="commentHookBlock">
+                <span class="hook-icon">💬</span>
+                <span id="commentHookText"></span>
+            </div>
+
+            <!-- 评分 -->
+            <div class="block-title">
+                <span class="icon">📊</span> 内容评分 <span class="badge">AI 自评</span>
+            </div>
+            <div class="scores-block" id="scoresBlock">
+                <div class="score-item">
+                    <div class="score-label">🔥 吸引力</div>
+                    <div class="score-value" id="scoreAttraction">-</div>
+                    <div class="score-bar"><div class="fill" id="barAttraction"></div></div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">❤️ 真实感</div>
+                    <div class="score-value" id="scoreAuthenticity">-</div>
+                    <div class="score-bar"><div class="fill" id="barAuthenticity"></div></div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">💪 转化力</div>
+                    <div class="score-value" id="scoreConversion">-</div>
+                    <div class="score-bar"><div class="fill" id="barConversion"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 结果区域（批量） ===== -->
+        <div id="batchResultArea" style="display:none;">
+            <div class="batch-results" id="batchResults"></div>
+        </div>
+
+    </div>
+
+    <div class="footer">Powered by DeepSeek API · AI 爆款内容生成器</div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ===== DOM 引用 =====
+        const topicInput = document.getElementById('topicInput');
+        const btnGenerate = document.getElementById('btnGenerate');
+        const btnToggleBatch = document.getElementById('btnToggleBatch');
+        const batchArea = document.getElementById('batchArea');
+        const batchInput = document.getElementById('batchInput');
+        const btnBatchGenerate = document.getElementById('btnBatchGenerate');
+        const customInstructions = document.getElementById('customInstructions');
+        const templateSelector = document.getElementById('templateSelector');
+        const loadingCard = document.getElementById('loadingCard');
+        const progressCard = document.getElementById('progressCard');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const errorCard = document.getElementById('errorCard');
+        const errorText = document.getElementById('errorText');
+        const resultCard = document.getElementById('resultCard');
+        const resultTopic = document.getElementById('resultTopic');
+        const resultTime = document.getElementById('resultTime');
+        const resultSaved = document.getElementById('resultSaved');
+        const titleList = document.getElementById('titleList');
+        const articleContent = document.getElementById('articleContent');
+        const coverList = document.getElementById('coverList');
+        const tagsBlock = document.getElementById('tagsBlock');
+        const commentHookText = document.getElementById('commentHookText');
+        const scoreAttraction = document.getElementById('scoreAttraction');
+        const scoreAuthenticity = document.getElementById('scoreAuthenticity');
+        const scoreConversion = document.getElementById('scoreConversion');
+        const barAttraction = document.getElementById('barAttraction');
+        const barAuthenticity = document.getElementById('barAuthenticity');
+        const barConversion = document.getElementById('barConversion');
+        const batchResultArea = document.getElementById('batchResultArea');
+        const batchResults = document.getElementById('batchResults');
+        const apiDot = document.getElementById('apiDot');
+        const apiStatus = document.getElementById('apiStatus');
+        const toast = document.getElementById('toast');
+
+        let currentTemplate = 'fuye';
+
+        // ===== 模板选择 =====
+        templateSelector.addEventListener('click', (e) => {
+            const btn = e.target.closest('.template-btn');
+            if (!btn) return;
+            templateSelector.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentTemplate = btn.dataset.template;
+        });
+
+        // ===== Toast =====
+        let toastTimer = null;
+        function showToast(msg, duration = 2000) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+        }
+
+        // ===== 健康检查 =====
+        async function checkHealth() {
+            try {
+                const resp = await fetch('/api/health');
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    apiDot.className = 'dot online';
+                    apiStatus.textContent = 'API 已连接 ✓';
+                } else {
+                    apiDot.className = 'dot offline';
+                    apiStatus.textContent = 'API 异常';
+                }
+            } catch {
+                apiDot.className = 'dot offline';
+                apiStatus.textContent = 'API 无法连接';
+            }
+        }
+        checkHealth();
+
+        // ===== 回车快捷键 =====
+        topicInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') btnGenerate.click();
+        });
+
+        // ===== 批量切换 =====
+        btnToggleBatch.addEventListener('click', () => {
+            const isOpen = batchArea.classList.toggle('show');
+            btnToggleBatch.textContent = isOpen ? '📋 收起批量输入 ▴' : '📋 批量输入多个主题 ▾';
+        });
+
+        // ===== 工具函数 =====
+        function showLoading() { loadingCard.classList.add('show'); }
+        function hideLoading() { loadingCard.classList.remove('show'); }
+
+        function showError(msg) {
+            errorText.textContent = '❌ ' + msg;
+            errorCard.classList.add('show');
+        }
+        function hideError() { errorCard.classList.remove('show'); }
+
+        function hideAllResults() {
+            resultCard.classList.remove('show');
+            batchResultArea.style.display = 'none';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('✅ 已复制到剪贴板');
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('✅ 已复制到剪贴板');
+            }
+        }
+
+        // ===== 渲染单个结果 =====
+        function renderSingleResult(data) {
+            const d = data.data;
+            resultTopic.textContent = '🎯 ' + data.topic;
+            resultTime.textContent = data.timestamp;
+            resultSaved.style.display = data.saved_path ? 'inline' : 'none';
+
+            titleList.innerHTML = '';
+            d.titles.forEach((t, i) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="idx">${i+1}</span><span>${escapeHtml(t)}</span><span class="copy-icon">📋</span>`;
+                li.addEventListener('click', () => copyToClipboard(t));
+                titleList.appendChild(li);
+            });
+
+            articleContent.textContent = d.article;
+
+            coverList.innerHTML = '';
+            d.covers.forEach((c) => {
+                const div = document.createElement('div');
+                div.className = 'cover-item';
+                div.innerHTML = `${escapeHtml(c)}<div class="copy-tip">📋 点击复制</div>`;
+                div.addEventListener('click', () => copyToClipboard(c));
+                coverList.appendChild(div);
+            });
+
+            // 标签
+            tagsBlock.innerHTML = '';
+            if (d.tags && d.tags.length) {
+                d.tags.forEach(tag => {
+                    const span = document.createElement('span');
+                    span.className = 'tag-item';
+                    span.textContent = tag;
+                    span.addEventListener('click', () => copyToClipboard(tag));
+                    tagsBlock.appendChild(span);
+                });
+            }
+
+            // 评论区引导
+            if (d.comment_hook) {
+                commentHookText.textContent = d.comment_hook;
+            } else {
+                commentHookText.textContent = '你们觉得呢？评论区聊聊～';
+            }
+
+            // 评分
+            const s = d.scores || {};
+            const a = s.attraction || 7;
+            const auth = s.authenticity || 7;
+            const conv = s.conversion || 7;
+            scoreAttraction.textContent = a + '/10';
+            scoreAuthenticity.textContent = auth + '/10';
+            scoreConversion.textContent = conv + '/10';
+            setBar(barAttraction, a);
+            setBar(barAuthenticity, auth);
+            setBar(barConversion, conv);
+
+            resultCard.classList.add('show');
+            batchResultArea.style.display = 'none';
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function setBar(el, val) {
+            const pct = Math.min(val / 10 * 100, 100);
+            el.style.width = pct + '%';
+            el.className = 'fill' + (val >= 8 ? ' high' : val >= 5 ? ' mid' : ' low');
+        }
+
+        // ===== 渲染批量结果 =====
+        function renderBatchResults(data) {
+            batchResults.innerHTML = '';
+
+            data.results.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'batch-result-item';
+
+                if (item.success) {
+                    const d = item.data;
+                    const tplName = item.template ? ({fuye:'副业赚钱',share:'经验分享',caikeng:'踩坑避雷'}[item.template]||item.template) : '';
+                    const titlesHtml = d.titles.map((t, i) =>
+                        `<li onclick="copyToClipboard('${escapeHtml(t)}')" style="padding:8px 12px;margin-bottom:6px;background:#f7f8fa;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;list-style:none;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#f7971e;color:#fff;border-radius:50%;font-size:0.7rem;font-weight:700;flex-shrink:0;">${i+1}</span>
+                            <span>${escapeHtml(t)}</span>
+                        </li>`
+                    ).join('');
+                    const coversHtml = d.covers.map(c =>
+                        `<div onclick="copyToClipboard('${escapeHtml(c)}')" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:14px;border-radius:8px;text-align:center;cursor:pointer;font-weight:600;font-size:0.9rem;">${escapeHtml(c)}</div>`
+                    ).join('');
+                    const tagsHtml = d.tags && d.tags.length ? d.tags.map(t => `<span style="background:#f0f4ff;color:#667eea;padding:2px 10px;border-radius:20px;font-size:0.78rem;font-weight:600;display:inline-block">${escapeHtml(t)}</span>`).join(' ') : '';
+
+                    div.innerHTML = `
+                        <div class="batch-topic">🔥 ${escapeHtml(item.topic)}</div>
+                        ${tplName ? '<div class="batch-template-label">📋 ' + tplName + '</div>' : ''}
+                        ${item.saved_path ? '<div style="margin-bottom:10px;font-size:0.8rem;color:#4ade80;">💾 已自动保存</div>' : ''}
+                        <div style="font-weight:700;font-size:0.9rem;margin-bottom:8px;">🔥 爆款标题</div>
+                        <ul style="margin-bottom:16px;padding:0;">${titlesHtml}</ul>
+                        <div style="font-weight:700;font-size:0.9rem;margin-bottom:8px;">📝 正文</div>
+                        <div style="background:#f7f8fa;padding:14px 16px;border-radius:8px;line-height:1.8;font-size:0.9rem;margin-bottom:16px;border-left:3px solid #f7971e;white-space:pre-wrap;">${escapeHtml(d.article)}</div>
+                        <div style="font-weight:700;font-size:0.9rem;margin-bottom:8px;">🖼️ 封面文案</div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">${coversHtml}</div>
+                        ${tagsHtml ? `<div style="font-weight:700;font-size:0.9rem;margin-bottom:8px;">🏷️ 标签</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">${tagsHtml}</div>` : ''}
+                        ${d.comment_hook ? `<div style="background:#fff8f0;border:1px solid #fde68a;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:0.85rem;color:#92400e;">💬 ${escapeHtml(d.comment_hook)}</div>` : ''}
+                        ${d.scores ? `<div style="display:flex;gap:12px;font-size:0.8rem;color:#999;"><span>🔥 吸引力 ${d.scores.attraction||'?'}/10</span><span>❤️ 真实感 ${d.scores.authenticity||'?'}/10</span><span>💪 转化力 ${d.scores.conversion||'?'}/10</span></div>` : ''}
+                    `;
+                } else {
+                    div.innerHTML = `<div class="batch-topic">❌ ${escapeHtml(item.topic)}</div><div class="batch-error">${escapeHtml(item.error || '未知错误')}</div>`;
+                }
+                batchResults.appendChild(div);
+            });
+
+            batchResultArea.style.display = 'block';
+            resultCard.classList.remove('show');
+            batchResultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ===== 核心：生成单个 =====
+        async function generateSingle(topic, instructions, templateId) {
+            btnGenerate.disabled = true;
+            btnGenerate.classList.add('loading');
+            hideError();
+            hideAllResults();
+            showLoading();
+
+            try {
+                const resp = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic, custom_instructions: instructions || '', template_id: templateId }),
+                });
+                const data = await resp.json();
+                hideLoading();
+                if (!data.success) { showError(data.error || '生成失败'); return; }
+                renderSingleResult(data);
+            } catch (err) {
+                hideLoading();
+                showError('网络错误：' + err.message);
+            } finally {
+                btnGenerate.disabled = false;
+                btnGenerate.classList.remove('loading');
+            }
+        }
+
+        // ===== 核心：批量生成 =====
+        async function generateBatch(topics, instructions, templateId) {
+            btnBatchGenerate.disabled = true;
+            hideError();
+            hideAllResults();
+            progressCard.classList.add('show');
+            progressFill.style.width = '0%';
+            progressText.textContent = `0 / ${topics.length}`;
+
+            try {
+                const resp = await fetch('/api/batch-generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topics, custom_instructions: instructions || '', template_id: templateId }),
+                });
+                const data = await resp.json();
+                if (!data.success) { showError(data.error || '批量生成失败'); progressCard.classList.remove('show'); return; }
+                progressFill.style.width = '100%';
+                progressText.textContent = `${data.succeeded} / ${data.total} 完成`;
+                setTimeout(() => { progressCard.classList.remove('show'); renderBatchResults(data); }, 500);
+            } catch (err) {
+                showError('网络错误：' + err.message);
+                progressCard.classList.remove('show');
+            } finally {
+                btnBatchGenerate.disabled = false;
+            }
+        }
+
+        // ===== 事件绑定 =====
+        btnGenerate.addEventListener('click', () => {
+            const topic = topicInput.value.trim();
+            if (!topic) { showToast('⚠️ 请输入主题', 1500); topicInput.focus(); return; }
+            generateSingle(topic, customInstructions.value.trim(), currentTemplate);
+        });
+
+        btnBatchGenerate.addEventListener('click', () => {
+            const raw = batchInput.value.trim();
+            if (!raw) { showToast('⚠️ 请输入至少一个主题', 1500); batchInput.focus(); return; }
+            const topics = raw.split('\n').map(s => s.trim()).filter(Boolean);
+            if (topics.length === 0) { showToast('⚠️ 请输入至少一个主题', 1500); return; }
+            generateBatch(topics, customInstructions.value.trim(), currentTemplate);
+        });
+
+        console.log('🚀 AI 爆款内容生成器已加载');
+    </script>
+
+</body>
+</html>
